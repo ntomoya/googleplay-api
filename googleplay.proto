@@ -361,7 +361,10 @@ message BulkDetailsEntry {
 }
 message BulkDetailsRequest {
   repeated string docid = 1;
-  optional bool includeChildDocs = 2;
+  optional bool includeChildDocs = 2[default = true];
+  optional bool includeDetails = 3[default = true];
+  optional string sourcePackageName = 4;
+  repeated int32 installedVersionCode = 7;
 }
 message BulkDetailsResponse {
   repeated BulkDetailsEntry entry = 1;
@@ -392,6 +395,66 @@ message BadgeContainer2 {
 }
 message BadgeLinkContainer {
   optional string link = 2;
+}
+message Stream{
+  optional string title = 1;
+  optional SubStream stream = 2;
+  optional string subtitle = 3;
+}
+
+message SubStream{
+  optional StreamLink link = 2;
+}
+message DirectPurchase {
+  optional string detailsUrl = 1;
+  optional string purchaseItemId = 2;
+  optional string parentItemId = 3;
+  optional int32 offerType = 4[default = 1];
+}
+
+message RedeemGiftCard {
+  optional string prefillCode = 1;
+  optional string partnerPayload = 2;
+}
+message ResolvedLink {
+  optional string detailsUrl = 1;
+  optional string browseUrl = 2;
+  optional string searchUrl = 3;
+  optional DirectPurchase directPurchase = 4;
+  optional string homeUrl = 5;
+  optional RedeemGiftCard redeemGiftCard = 6;
+  optional bytes serverLogsCookie = 7;
+  optional Docid DocId = 8;
+  optional string wishlistUrl = 9;
+  optional int32 backend = 10;
+  optional string query = 11;
+  optional string myAccountUrl = 12;
+  optional HelpCenter helpCenter = 13;
+}
+message HelpCenter {
+  optional string contextId = 1;
+}
+message QuickLink {
+  optional string name = 1;
+  optional Image image = 2;
+  optional ResolvedLink link = 3;
+  optional bool displayRequired = 4;
+  optional bytes serverLogsCookie = 5;
+  optional int32 backendId = 6;
+  optional bool prismStyle = 7;
+}
+
+message Link {
+  optional string uri = 1;
+  optional ResolvedLink resolvedLink = 2;
+  optional int32 uriBackend = 3;
+}
+message StreamLink{
+  optional string url = 1;
+  optional string streamUrl = 2;
+  optional string searchUrl = 3;
+  optional string subCategoryUrl = 5;
+  optional string searchQuery = 11;
 }
 message Features {
   repeated Feature featurePresence = 1;
@@ -510,30 +573,99 @@ message AppDetails {
   optional string uploadDate = 16;
   repeated FileMetadata file = 17;
   optional string appType = 18;
-  optional bool unstable = 21;
+  repeated string certificateHash = 19;
+  optional bool variesWithDevice = 21 [default = true];
+  repeated CertificateSet certificateSet = 22;
+  repeated string autoAcquireFreeAppIfHigherVersionAvailableTag = 23;
   optional bool hasInstantLink = 24;
-  optional string containsAds = 30;
+  repeated string splitId = 25;
+  optional bool gamepadRequired = 26;
+  optional bool externallyHosted = 27;
+  optional bool everExternallyHosted = 28;
+  optional string installNotes = 30;
+  optional int32 installLocation = 31;
+  optional int32 targetSdkVersion = 32;
+  optional string hasPreregistrationPromoCode = 33;
   optional Dependencies dependencies = 34;
   optional TestingProgramInfo testingProgramInfo = 35;
   optional EarlyAccessInfo earlyAccessInfo = 36;
+  optional EditorChoice editorChoice = 41;
   optional string instantLink = 43;
   optional string developerAddress = 45;
+  optional Publisher publisher = 46;
+  optional string categoryName = 48;
+  optional int64 downloadCount = 53;
+  optional string downloadLabelDisplay = 61;
+  optional string inAppProduct = 67;
+  optional string downloadLabelAbbreviated = 77;
+  optional string downloadLabel = 78;
+  optional Compatibility compatibility = 82;
+}
+
+message Compatibility {
+  repeated ActiveDevice activeDevices = 1;
+}
+
+message ActiveDevice {
+  optional string requiredOS = 1;
+  optional string name = 2;
+}
+
+message ModifyLibrary{
+  optional string id = 1;
+  optional string packageToAdd = 2;
+  optional string packageToRemove = 3;
+}
+
+message Publisher{
+  optional PublisherStream publisherStream = 2;
+}
+
+message PublisherStream{
+  optional string moreUrl = 3;
+  optional DeveloperProfile developerProfile = 8;
+  optional string query = 11;
+}
+
+message DeveloperProfile{
+    optional string developerId = 1;
+}
+
+message EditorChoice{
+  repeated string bulletins = 1;
+  optional string description = 2;
+  optional SubStream stream = 3;
+  optional string title = 4;
+  optional string subtitle = 5;
+}
+message CertificateSet {
+  optional string certificateHash = 1;
+  optional string sha256 = 2;
 }
 message Dependencies {
-  optional int32 unknown1 = 1;
-  optional int64 unknown2 = 2;
+  optional int32 unknown = 1;
+  optional int64 size = 2;
   repeated Dependency dependency = 3;
-  optional int32 unknown3 = 4;
+  optional int32 targetSdk = 4;
+  optional int32  unknown2 = 5;
+  repeated string splitApks = 11;
+  repeated LibraryDependency libraryDependency = 13;
 }
 message Dependency {
   optional string packageName = 1;
   optional int32 version = 2;
   optional int32 unknown4 = 4;
 }
+message LibraryDependency {
+  optional string packageName = 1;
+  optional int32 versionCode = 2;
+}
 message TestingProgramInfo {
   optional bool subscribed = 2;
-  optional bool subscribed1 = 3;
-  optional string testingProgramEmail = 5;
+  optional bool subscribedAndInstalled = 3;
+  optional string email = 5;
+  optional string displayName = 7;
+  optional Image image = 6;
 }
 message EarlyAccessInfo {
   optional string email = 3;
@@ -565,6 +697,13 @@ message FileMetadata {
   optional int32 fileType = 1;
   optional int32 versionCode = 2;
   optional int64 size = 3;
+  optional string splitId = 4;
+  optional int64 compressedSize = 5;
+  repeated PatchDetails patchDetails = 6;
+}
+message PatchDetails {
+  optional int32 baseVersionCode = 1;
+  optional int64 size = 2;
 }
 message MagazineDetails {
   optional string parentDetailsUrl = 1;
@@ -702,21 +841,36 @@ message DocV2 {
   optional string purchaseDetailsUrl = 20;
   optional bool detailsReusable = 21;
   optional string subtitle = 22;
-  optional UnknownCategoryContainer unknownCategoryContainer = 24;
-  optional Unknown25 unknown25 = 25;
+  optional string translatedDescriptionHtml = 23;
+  optional bytes serverLogsCookie = 24;
+  optional AppInfo appInfo = 25;
+  optional bool mature = 26;
   optional string descriptionShort = 27;
+  optional bool availableForPreregistration = 29;
+  repeated ReviewTip tip = 30;
   optional string reviewSnippetsUrl = 31;
+  optional bool forceShareability = 32;
+  optional bool useWishlistAsPrimaryAction = 33;
   optional string reviewQuestionsUrl = 34;
+  optional string reviewSummaryUrl = 39;
 }
-message Unknown25 {
-  repeated Unknown25Item item = 2;
+message AppInfo {
+  optional string title = 1;
+  repeated AppInfoSection section = 2;
 }
-message Unknown25Item {
+message AppInfoSection {
   optional string label = 1;
-  optional Unknown25Container container = 3;
+  optional AppInfoContainer container = 3;
 }
-message Unknown25Container {
-  optional string value = 2;
+message AppInfoContainer {
+  optional Image image = 1;
+  optional string description = 2;
+}
+message ReviewTip {
+  optional string tipUrl = 1;
+  optional string text = 2;
+  optional int32 polarity = 3;
+  optional int64 reviewCount = 4;
 }
 message RelatedLinks {
   optional RelatedLinksUnknown1 unknown1 = 10;
@@ -769,6 +923,12 @@ message Availability {
   repeated Install install = 14;
   optional FilterEvaluationInfo filterInfo = 16;
   optional OwnershipInfo ownershipInfo = 17;
+  repeated AvailabilityProblem availabilityProblem = 18;
+  optional bool hidden = 21;
+}
+message AvailabilityProblem {
+  optional int32 problemType = 1;
+  repeated string missingValue = 2;
 }
 message FilterEvaluationInfo {
   repeated RuleEvaluation ruleEvaluation = 1;
