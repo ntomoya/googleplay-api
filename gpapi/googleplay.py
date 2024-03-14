@@ -394,7 +394,7 @@ class GooglePlayAPI(object):
 
         path = SEARCH_URL + "?c=3&q={}".format(requests.utils.quote(query))
         # FIXME: not sure if this toc call should be here
-        self.toc()
+        # self.toc()
         data = self.executeRequestApi2(path)
         if utils.hasPrefetch(data):
             response = data.preFetch[0].response
