@@ -20,9 +20,11 @@ jobs:
         python-version: '3.8'
         cache: pip
     - name: Install Protoc
-      uses: actions-gw/setup-protoc-to-env@v2
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        PROTOC_ZIP=protoc-3.13.0-linux-x86_64.zip && \
+        curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.13.0/$PROTOC_ZIP && \
+        unzip -q $PROTOC_ZIP bin/protoc -d /usr/local && 
+        protoc --version
     - name: Install dependencies
       run: |
         pip install setuptools wheel build
