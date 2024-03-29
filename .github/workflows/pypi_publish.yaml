@@ -28,6 +28,6 @@ jobs:
         pip install setuptools wheel build
     - name: Build
       run: |
-        python -m build
+        python setup.py build && python -m build
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
