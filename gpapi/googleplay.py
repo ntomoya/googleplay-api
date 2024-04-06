@@ -226,14 +226,16 @@ class GooglePlayAPI(object):
         except ValueError:
             pass
 
-    def login(self, email=None, password=None, gsfId=None, authSubToken=None, returnParams=False):
+    def login(self, email=None, password=None, gsfId=None, authSubToken=None, returnParams=False, verify_auth=True):
         """Login to your Google Account.
         For first time login you should provide:
             * email
             * password
         For the following logins you need to provide:
             * gsfId
-            * authSubToken"""
+            * authSubToken
+        verify_auth=True verifies auth when login with gsfId & authSubToken. checks token sanity by default.
+        """
         if email is not None and password is not None:
             # First time setup, where we obtain an ac2dm token and
             # upload device information
@@ -282,8 +284,9 @@ class GooglePlayAPI(object):
             # no need to initialize API
             self.gsfId = gsfId
             self.setAuthSubToken(authSubToken)
-            # check if token is valid with a simple search
-            self.search('drv')
+            if verify_auth:
+                # check if token is valid with a simple search
+                self.search('drv')
         else:
             raise LoginError('Either (email,pass) or (gsfId, authSubToken) is needed')
 
