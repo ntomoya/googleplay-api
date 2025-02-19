@@ -1,19 +1,24 @@
+"""
+This file is kept for backwards compatibility with older pip versions.
+The project configuration is in pyproject.toml
+"""
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build
-
-
 import os.path
 import subprocess
 import shutil
 
 PROTOC_EXEC = "protoc"
+<<<<<<< HEAD
 
 CURRENT_DIR = os.path.abspath( os.path.dirname( __file__ ) )
 
 __VERSION__ = '3.0.6'
+=======
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
+>>>>>>> 43feed2 (Migrate setuptools to uv)
 
 class ProtobufBuilder(_build):
-
     def run(self):
         # check if protobuf is installed
         exec_path = shutil.which(PROTOC_EXEC)
@@ -27,27 +32,7 @@ class ProtobufBuilder(_build):
             CURRENT_DIR + "/googleplay.proto"])
         super().run()
 
-setup(name='ak-gpapi',
-      version=__VERSION__,
-      description='Unofficial python api for google play',
-      long_description=open('README.md').read(),
-      long_description_content_type='text/markdown',
-      url='https://github.com/appknox/googleplay-api',
-      author='appknox',
-      author_email='engineering@appknox.com',
-      license='GPL3',
-      packages=['gpapi'],
-      package_data={
-          'gpapi': [
-              'config.py'
-              'device.properties',
-              'googleplay_pb2.py',
-              'googleplay.py',
-              'utils.py'
-          ]},
-      include_package_data=True,
-      cmdclass={'build_py': ProtobufBuilder},
-      install_requires=['cryptography<41',
-                        'protobuf==3.19.0',
-                        'requests==2.31.0',
-                        'urllib3 < 1.26.0'])
+if __name__ == "__main__":
+    setup(
+        cmdclass={'build_py': ProtobufBuilder}
+    )
