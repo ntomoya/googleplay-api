@@ -26,9 +26,6 @@ current_version = "3.0.5"
 commit = true
 tag = true
 
-[[tool.bumpversion.files]]
-filename = "setup.py"
-
 [tool.setuptools]
 packages = ["gpapi"]
 package-data = {gpapi = [
@@ -39,6 +36,3 @@ package-data = {gpapi = [
     "utils.py"
 ]}
 include-package-data = true
-
-[tool.setuptools.cmdclass]
-build_py = "setup.ProtobufBuilder"
