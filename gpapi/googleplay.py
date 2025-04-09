@@ -338,7 +338,7 @@ class GooglePlayAPI(object):
                         ac2dm_params[key.strip().lower()] = value.strip()
 
                 ac2dm_token = ac2dm_params.get("auth")
-                self.setAuthSubToken(ac2dm_token)
+                master_token = ac2dm_params.get("token")
                 if not ac2dm_token:
                     print("ac2dm token response data:", ac2dm_params)
                     raise LoginError("Could not find ac2dm token ('auth' or 'token') in ac2dm response.")
@@ -364,11 +364,20 @@ class GooglePlayAPI(object):
                  # Decide if we should raise or just warn and continue without gsfId
                  raise LoginError(f"Check-in failed during initial_token flow: {e}")
 
-            # --- Step 3: Upload device config (like email/password flow) ---
-            print("Step 3: Uploading device configuration...")
+            # --- Step 3: Get authSubToken
+            print("Step 3: Get authSubToken...")
+            # password and email param will be removed in getSecondRoundToken
+            requestParams = self.deviceBuilder.getLoginParams(email, "dummy_password")
+            requestParams['service'] = 'androidmarket'
+            requestParams['app'] = 'com.android.vending'
+            second_round_token = self.getSecondRoundToken(master_token, requestParams)
+            self.setAuthSubToken(second_round_token)
+
+            # --- Step 4: Upload device config (like email/password flow) ---
+            print("Step 4: Uploading device configuration...")
             try:
                 self.uploadDeviceConfig()
-                print("Step 3: Device configuration uploaded.")
+                print("Step 4: Device configuration uploaded.")
             except Exception as e:
                  # Log error but don't necessarily fail the login
                  print(f"Warning: Failed to upload device config during initial_token flow: {e}")
