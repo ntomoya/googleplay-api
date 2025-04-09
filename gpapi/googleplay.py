@@ -226,15 +226,26 @@ class GooglePlayAPI(object):
         except ValueError:
             pass
 
-    def login(self, email=None, password=None, gsfId=None, authSubToken=None, returnParams=False, verify_auth=True):
+    def login(self, email=None, password=None, gsfId=None, authSubToken=None, initial_token=None, returnParams=False, verify_auth=True):
         """Login to your Google Account.
-        For first time login you should provide:
-            * email
-            * password
-        For the following logins you need to provide:
-            * gsfId
-            * authSubToken
-        verify_auth=True verifies auth when login with gsfId & authSubToken. checks token sanity by default.
+        Provide one of the following sets of credentials:
+            * email and password (for first-time login, performs check-in and gets gsfId/authSubToken)
+            * gsfId and authSubToken (for subsequent logins with existing tokens)
+            * email and initial_token (performs two-step auth using initial token, performs check-in, gets gsfId/authSubToken)
+
+        Args:
+            email (str, optional): Google account email. Required for email/password and email/initial_token flows. Defaults to None.
+            password (str, optional): Google account password (or app-specific password). Required for email/password flow. Defaults to None.
+            gsfId (int, optional): Google Services Framework ID. Required for gsfId/authSubToken flow. Defaults to None.
+            authSubToken (str, optional): Authentication token. Required for gsfId/authSubToken flow. Defaults to None.
+            initial_token (str, optional): An initial token to perform two-step authentication. Requires 'email' to be provided as well. Defaults to None.
+            returnParams (bool, optional): If using email/password or email/initial_token, return gsfId and authSubToken. Defaults to False.
+            verify_auth (bool, optional): If using gsfId/authSubToken, perform a quick check to verify token validity. Defaults to True.
+
+        Raises:
+            LoginError: If login fails or invalid arguments are provided.
+            SecurityCheckError: If Google requires additional verification (e.g., CAPTCHA, app password).
+            ValueError: If required arguments for a specific flow are missing.
         """
         if email is not None and password is not None:
             # First time setup, where we obtain an ac2dm token and
@@ -287,8 +298,86 @@ class GooglePlayAPI(object):
             if verify_auth:
                 # check if token is valid with a simple search
                 self.search('drv')
+        elif email is not None and initial_token is not None:
+            # --- Login using email and initial_token ---
+            if not email:
+                 raise ValueError("Email is required when using initial_token.")
+            if not initial_token:
+                raise ValueError("Initial token cannot be empty when using email/initial_token flow.")
+
+            print("Step 1: Requesting ac2dm token using initial token...")
+            # --- Step 1: Get ac2dm token (like Go's Marshal) ---
+            auth_url = AUTH_URL
+            ac2dm_payload = {
+                "ACCESS_TOKEN": "1",
+                "Token": initial_token,
+                "service": "ac2dm",
+                "callerPkg": "com.google.android.gms",
+                "callerSig": "38918a453d07199354f8b19af05ec6562ced5788",
+            }
+            ac2dm_token = None
+            try:
+                temp_session = requests.Session()
+                temp_session.verify = self.ssl_verify
+                temp_session.mount('https://', AuthHTTPAdapter())
+                headers_step1 = {'User-Agent': 'GoogleAuth/1.4'}
+
+                response_step1 = temp_session.post(auth_url, data=ac2dm_payload,
+                                                   headers=headers_step1,
+                                                   verify=self.ssl_verify,
+                                                   proxies=self.proxies_config,
+                                                   timeout=60)
+                response_step1.raise_for_status()
+                ac2dm_token_data = response_step1.text
+                temp_session.close()
+
+                ac2dm_params = {}
+                for line in ac2dm_token_data.splitlines():
+                     if "=" in line:
+                        key, value = line.split("=", 1)
+                        ac2dm_params[key.strip().lower()] = value.strip()
+
+                ac2dm_token = ac2dm_params.get("auth")
+                self.setAuthSubToken(ac2dm_token)
+                if not ac2dm_token:
+                    print("ac2dm token response data:", ac2dm_params)
+                    raise LoginError("Could not find ac2dm token ('auth' or 'token') in ac2dm response.")
+                print("Step 1: ac2dm token obtained.")
+
+            except requests.exceptions.RequestException as e:
+                print(f"Error during initial token request (ac2dm): {e}")
+                if hasattr(e, 'response') and e.response is not None:
+                    print(f"Response status: {e.response.status_code}")
+                    print(f"Response body: {e.response.text}")
+                raise LoginError(f"Failed to get ac2dm token: {e}")
+            except Exception as e:
+                print(f"Unexpected error during step 1: {e}")
+                raise
+
+            # --- Step 2: Perform check-in using email and ac2dm token ---
+            print("Step 2: Performing check-in using email and ac2dm token...")
+            try:
+                self.gsfId = self.checkin(email, ac2dm_token)
+                print(f"Step 2: Check-in successful. GSF ID: {self.gsfId:x}")
+            except Exception as e:
+                 print(f"Error during check-in: {e}")
+                 # Decide if we should raise or just warn and continue without gsfId
+                 raise LoginError(f"Check-in failed during initial_token flow: {e}")
+
+            # --- Step 3: Upload device config (like email/password flow) ---
+            print("Step 3: Uploading device configuration...")
+            try:
+                self.uploadDeviceConfig()
+                print("Step 3: Device configuration uploaded.")
+            except Exception as e:
+                 # Log error but don't necessarily fail the login
+                 print(f"Warning: Failed to upload device config during initial_token flow: {e}")
+
+            if returnParams:
+                return self.gsfId, self.authSubToken
+            # End of email/initial_token flow
         else:
-            raise LoginError('Either (email,pass) or (gsfId, authSubToken) is needed')
+            raise LoginError('Provide one of: (email, password), (gsfId, authSubToken), or (email, initial_token)')
 
     def getAuthSubToken(self, email, passwd):
         requestParams = self.deviceBuilder.getLoginParams(email, passwd)
