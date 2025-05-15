@@ -504,6 +504,23 @@ class GooglePlayAPI(object):
         resIterator = response.payload.listResponse.doc
         return list(map(utils.parseProtobufObj, resIterator))
 
+    def search_all(self, query):
+        apps = []
+        result = self.search(query)
+        while result:
+            for doc in result:
+                for cluster in doc["child"]:
+                    for app in cluster["child"]:
+                        apps.append(app)
+                    if 'containerMetadata' in cluster and 'nextPageUrl' in cluster["containerMetadata"]:
+                        nextPageUrl = cluster["containerMetadata"]['nextPageUrl']
+                        response = self.executeRequestApi2(FDFE + nextPageUrl)
+                        next_result = list(map(utils.parseProtobufObj,response.payload.listResponse.doc))
+                    else:
+                        next_result = None
+            result = next_result
+        return apps
+
     def details(self, packageName, versionCode=False):
         """Get app details from a package name.
 
